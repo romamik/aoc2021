@@ -3,10 +3,10 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use std::error;
 
-fn main() {
+pub fn main() {
     
     let test_vec = vec![0b00100, 0b11110, 0b10110, 0b10111, 0b10101, 0b01111, 0b00111, 0b11100, 0b10000, 0b11001, 0b00010, 0b01010];
-    let day3_vec = read_binary_ints("day3.txt").unwrap();
+    let day3_vec = read_binary_ints("input/day3.txt").unwrap();
     println!("test pt1 {0}", get_pt1_result(&test_vec));
     println!("day3 pt1 {0}", get_pt1_result(&day3_vec));
     println!("test pt2 {0}", get_pt2_result(&test_vec));

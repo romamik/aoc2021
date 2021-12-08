@@ -57,7 +57,7 @@ fn solve(lines: &[[[i32;2]; 2]], is_pt2: bool) -> i32 {
     overlap_count
 }
 
-fn main() {
+pub fn main() {
     
     let test_lines = vec![
         [[0,9], [5,9]],
@@ -71,7 +71,7 @@ fn main() {
         [[0,0], [8,8]],
         [[5,5], [8,2]],
     ];
-    let day5_lines = read_lines("day5.txt");
+    let day5_lines = read_lines("input/day5.txt");
     println!("test pt1 {:?}", solve(&test_lines, false));
     println!("day5 pt1 {:?}", solve(&day5_lines, false));
     println!("test pt2 {:?}", solve(&test_lines, true));

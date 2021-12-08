@@ -23,9 +23,9 @@ where F: Fn(i32, i32) -> i32 {
     min_cost.unwrap()
 }
 
-fn main() {
+pub fn main() {
     let test_input = vec![16,1,2,0,4,2,7,1,2,14];
-    let day7_input = read_array("day7.txt");
+    let day7_input = read_array("input/day7.txt");
     println!("test pt1 {}", solve(&test_input, cost_pt1));
     println!("day7 pt1 {}", solve(&day7_input, cost_pt1));
     println!("test pt2 {}", solve(&test_input, cost_pt2));

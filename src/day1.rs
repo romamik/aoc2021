@@ -3,11 +3,11 @@ use std::io::{self, BufRead};
 use std::path::Path;
 use std::error;
 
-fn main() {
+pub fn main() {
 
     let test_vec = vec![199, 200, 208, 210, 200, 207, 240, 269, 260, 263];
 
-    let input_vec = read_ints("day1.txt").unwrap();
+    let input_vec = read_ints("input/day1.txt").unwrap();
 
     println!("test increases: {}", count_increases(&test_vec));
     println!("test windowed increases {}", count_increases_windowed(&test_vec, 3));

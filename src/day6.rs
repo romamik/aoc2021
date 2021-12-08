@@ -67,10 +67,10 @@ fn still_naive_solve(fish: &[i32], days: i32) -> usize {
     all_fish.iter().fold(0, |sum, (_, count)| sum + count)
 }
 
-fn main() {
+pub fn main() {
     
     let test_fish = vec![3,4,3,1,2];
-    let day6_fish = read_array("day6.txt");
+    let day6_fish = read_array("input/day6.txt");
     println!("naive test pt1 {}", naive_solve(&test_fish, DAYS_PT1));
     println!("naive day6 pt1 {}", naive_solve(&day6_fish, DAYS_PT1));
     println!("less naive test pt1 {}", still_naive_solve(&test_fish, DAYS_PT1));

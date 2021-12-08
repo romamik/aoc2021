@@ -148,7 +148,7 @@ fn solve_pt2(set: &BingoSet) -> Option<u32> {
 }
 
 
-fn main() {
+pub fn main() {
 
     let test_set = BingoSet {
         numbers: vec![7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1],
@@ -177,7 +177,7 @@ fn main() {
         ],
     };
 
-    let day4_set = read_bingo_set("day4.txt");
+    let day4_set = read_bingo_set("input/day4.txt");
 
     println!("test pt1 {:?}", solve_pt1(&test_set));
     println!("day4 pt1 {:?}", solve_pt1(&day4_set));

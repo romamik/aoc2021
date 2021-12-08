@@ -20,7 +20,7 @@ struct Command {
     val: i32
 }
 
-fn main() -> Result<()> {
+pub fn main() -> Result<()> {
     
     let test_lines = vec![
         "forward 5",
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
     ];
 
     let test_commands = lines2commands(&test_lines)?;
-    let day2_commands = read_commands("day2.txt")?;
+    let day2_commands = read_commands("input/day2.txt")?;
 
     let (x, depth) = find_position(&test_commands);
     println!("test {0}*{1}={2}", x, depth, x * depth);
