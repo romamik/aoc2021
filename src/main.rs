@@ -8,7 +8,7 @@ mod day7;
 mod day8;
 
 fn main() {
-    let run_all = true;
+    let run_all = false;
     if run_all {
         day1::main();
         day2::main().unwrap();
