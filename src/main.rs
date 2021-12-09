@@ -6,6 +6,7 @@ mod day5;
 mod day6;
 mod day7;
 mod day8;
+mod day9;
 
 fn main() {
     let run_all = false;
@@ -18,5 +19,6 @@ fn main() {
         day6::main();
         day7::main();
     }
-    day8::main();
+    //day8::main();
+    day9::main();
 }
