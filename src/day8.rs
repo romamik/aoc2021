@@ -23,7 +23,7 @@ fn possible_valid_signals(input_signal, mapping)
 
 fn find_mapping (solve pt2)
     function to find mapping that makes all input_signals to be mapped to one of valid_signals
-    we just test all possible mappings to see if they map each input_signal to exactly one valid_signal
+    we just test all possible mappings to see if they map each input_signal to some valid_signal, if find such full mapping - we are done
     but we do not generate all possible complete mappings, we start with shorter incomplete mappings and produce more complete mappings only for mappings that possibly can map input_signals to valid_signals
 */
 
