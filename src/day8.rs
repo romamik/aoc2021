@@ -18,23 +18,13 @@ We have
 fn possible_valid_signals(input_signal, mapping)
     function to find to which of valid_signals input_signal can be mapped using mapping.
     if mapping is complete, i.e. defines mapping for every segment - it's obvious: just apply mapping and find matches in valid_signals
-    if mapping is incomplete, we should map only segments that have defined mapping and then find valid_signals that have mapped segments turned on
+    if mapping is incomplete, we should map only segments that have defined mapping and then find valid_signals that have mapped segments turned on or off same as in input_signal
     One more thing to consider is that input_signal can possibly be mapped to valid_signal if they have the same length
 
 fn find_mapping (solve pt2)
     function to find mapping that makes all input_signals to be mapped to one of valid_signals
     we just test all possible mappings to see if they map each input_signal to exactly one valid_signal
     but we do not generate all possible complete mappings, we start with shorter incomplete mappings and produce more complete mappings only for mappings that possibly can map input_signals to valid_signals
-
-    THIS DOES NOT WORK: After implementing above algorithm all test pass except the last one. 
-    "gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce"
-    result is:
-        aefg => 4
-        abcfg => 2
-        fg => 1
-        abceg => 2
-
-    Looks like we should check final mapping
 */
 
 type InputLine = [Vec<Signal>; 2];
@@ -162,6 +152,7 @@ fn find_possible_valid_signals<'a>(
     signal: &'a Signal,
     mapping: &'a Mapping,
 ) -> Vec<&'a Signal> {
+    // it is possible to check not only turned on segments, but also turned off segments
     let mut possible_valid_signals = Vec::new();
     for valid_signal in valid_signals {
         if valid_signal.len() == signal.len() {
@@ -183,18 +174,15 @@ fn solve_pt2_line(valid_signals: &Vec<Signal>, input_line: &InputLine) -> i32 {
         mapping: &mut Mapping,
         input_signals: &Vec<Signal>,
     ) -> bool {
-        let mut certain_count = 0;
         for input_signal in input_signals {
             let possible_count = find_possible_valid_signals(valid_signals, input_signal, mapping)
                 .iter()
                 .count();
-            match possible_count {
-                0 => return false, //mapping is impossible
-                1 => certain_count += 1,
-                _ => (),
+            if possible_count == 0 {
+                return false;
             }
         }
-        if certain_count == input_signals.len() {
+        if mapping.len() == ALL_SEGMENTS.len() {
             return true;
         }
 
@@ -216,7 +204,7 @@ fn solve_pt2_line(valid_signals: &Vec<Signal>, input_line: &InputLine) -> i32 {
     combined_input.extend(input_line[1].clone());
     recursive_search(valid_signals, &mut mapping, &combined_input);
     let mut result = 0;
-    println!("{:?}", mapping);
+    //println!("{:?}", mapping);
     for test_signal in &input_line[1] {
         let mapped = find_possible_valid_signals(valid_signals, test_signal, &mapping);
         if mapped.len() != 1 {
@@ -226,17 +214,19 @@ fn solve_pt2_line(valid_signals: &Vec<Signal>, input_line: &InputLine) -> i32 {
         let mapped = valid_signals.iter().position(|s| s.0 == mapped.0).unwrap();
         result *= 10;
         result += mapped;
-        println!("{:?} => {:?}", test_signal, mapped);
+        //println!("{:?} => {:?}", test_signal, mapped);
     }
 
     result as i32
 }
 
-fn solve_pt2(valid_signals: &Vec<Signal>, input: &Input) {
+fn solve_pt2(valid_signals: &Vec<Signal>, input: &Input) -> i32 {
+    let mut result = 0;
     for input_line in input.iter() {
-        let line_result = solve_pt2_line(valid_signals, input_line);
-        println!("{}", line_result);
+        result += solve_pt2_line(valid_signals, input_line);
+        //println!("{}", line_result);
     }
+    result
 }
 
 pub fn main() {
@@ -259,14 +249,12 @@ pub fn main() {
         egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg | gbdfcae bgc cg cgb
         gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
     ";
-    let test_input = "
-        gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc | fgae cfgab fg bagce
-    ";
     let test_input = parse_input(test_input);
     let day8_input = parse_input(&fs::read_to_string("input/day8.txt").unwrap());
     println!("test pt1 {:?}", solve_pt1(&valid_signals, &test_input));
     println!("day8 pt1 {:?}", solve_pt1(&valid_signals, &day8_input));
-    solve_pt2(&valid_signals, &test_input);
+    println!("test pt2 {:?}", solve_pt2(&valid_signals, &test_input));
+    println!("day8 pt2 {:?}", solve_pt2(&valid_signals, &day8_input));
 }
 
 fn parse_input(s: &str) -> Input {
