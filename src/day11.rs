@@ -38,7 +38,7 @@ fn make_step(state: &mut [i8; 100]) -> usize {
 fn solve_pt1(input: &[i8; 100]) -> usize {
     let mut map = *input;
     let mut num_flashes = 0;
-    for i in 0..100 {
+    for _ in 0..100 {
         num_flashes += make_step(&mut map);
     }
     num_flashes
@@ -78,6 +78,7 @@ pub fn main() {
     println!("day11 pt2 {}", solve_pt2(&day11_input));
 }
 
+#[allow(dead_code)]
 fn to_string(state: &[i8; 100]) -> String {
     let mut result = String::new();
     for y in 0..10 {
