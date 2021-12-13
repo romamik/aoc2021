@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 #[derive(Debug)]
 struct Graph (HashMap::<String, Vec::<String>>);
 
-static empty: Vec::<String> = vec![];
+static EMPTY: Vec::<String> = vec![];
 
 impl Graph {
 
@@ -14,7 +15,7 @@ impl Graph {
     fn get_edges_from(&self, vert: &str) -> &[String] {
         match self.0.get(vert) {
             Some(vec) => vec,
-            None => &empty
+            None => &EMPTY
         }
     }
 
@@ -31,35 +32,40 @@ impl Graph {
     }
 }
 
+struct Path<'a> {last: &'a str, prev_path: Option<Rc::<Path<'a>>>}
+
 fn can_visit_multiple(vert: &str) -> bool {
     vert.chars().next().map(|c| c.is_uppercase()).unwrap_or(false)
 }
 
-fn is_vert_in_path(vert: &str, path: &Vec<&str>) -> bool {
-    path.iter().any(|&v| v == vert)
+fn is_vert_in_path(vert: &str, path: &Option<Rc::<Path>>) -> bool {
+    match path {
+        None => false,
+        Some(path) if path.last == vert => true,
+        Some(path) => is_vert_in_path(vert, &path.prev_path),
+    }
 }
 
-// todo - use linked lists for path to avoid clone()
-fn find_all_paths<'a>(graph: &'a Graph, from: &'a str, to: &'a str) -> Vec::<Vec::<&'a str>> {
+fn find_all_paths<'a>(graph: &'a Graph, from: &'a str, to: &'a str) -> usize {
 
-    let mut paths = vec![];
-    let mut queue = vec![vec![from]];
+    let init_path = Rc::new(Path {last: from, prev_path: None});
+    let mut queue = vec![init_path];
+    let mut found_paths = vec![];
     while queue.len() > 0 {
-        let prev_path = queue.pop().unwrap();
-        let last_vert = prev_path.last().unwrap();
-        for next_vert in graph.get_edges_from(last_vert).iter() {
-            if next_vert == to {
-                paths.push(prev_path.clone());
-            }
-            else if can_visit_multiple(next_vert) || !is_vert_in_path(next_vert, &prev_path) {
-                let mut new_path = prev_path.clone();
-                new_path.push(next_vert);
+        let path = queue.pop().unwrap();
+        let last = path.last;
+        if last == to {
+            found_paths.push(path);
+        }
+        else if can_visit_multiple(last) || !is_vert_in_path(last, &path.prev_path) {
+            for next_vert in graph.get_edges_from(last).iter() {
+                let new_path = Rc::new(Path {last: next_vert, prev_path: Some(path.clone())});
                 queue.push(new_path);
             }
         }
     }
 
-    paths
+    found_paths.len()
 }
 
 
@@ -107,10 +113,10 @@ pub fn main() {
     ");
     let day12_input = parse_input(&std::fs::read_to_string("input/day12.txt").unwrap());
 
-    println!("test1 pt1 {}", find_all_paths(&test_input1, "start", "end").iter().count());
-    println!("test2 pt1 {}", find_all_paths(&test_input2, "start", "end").iter().count());
-    println!("test3 pt1 {}", find_all_paths(&test_input3, "start", "end").iter().count());
-    println!("day12 pt1 {}", find_all_paths(&day12_input, "start", "end").iter().count());
+    println!("test1 pt1 {}", find_all_paths(&test_input1, "start", "end"));
+    println!("test2 pt1 {}", find_all_paths(&test_input2, "start", "end"));
+    println!("test3 pt1 {}", find_all_paths(&test_input3, "start", "end"));
+    println!("day12 pt1 {}", find_all_paths(&day12_input, "start", "end"));
 }
 
 fn parse_input(s: &str) -> Graph {
