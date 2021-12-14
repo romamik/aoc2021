@@ -81,7 +81,7 @@ fn better_solve(input: &Input, steps: usize) -> usize {
         insert_pair(&mut pairs, &[prev_char, cur_char], 1);
         prev_char = cur_char;
     }
-    insert_pair(&mut pairs, &[prev_char, '!'], 1);
+    insert_pair(&mut pairs, &[prev_char, '!'], 1); // fake pair that will never expand, now can just count first chars of the pairs
     
     for _ in 0..steps {
         let mut new_pairs = HashMap::new();
