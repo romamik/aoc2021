@@ -31,36 +31,93 @@ fn count_chars(s: &str) -> HashMap<char, usize> {
     result
 }
 
+fn find_min_max(char_count: &HashMap<char, usize>) -> [Option::<(char, usize)>; 2] {
+    let mut min = None;
+    let mut max = None;
+    for (&ch, &count) in char_count.iter() {
+        match min {
+            None => { min = Some((ch, count)); }
+            Some(p) if p.1 > count => { min = Some((ch, count)); }
+            _ => (),
+        }
+        match max {
+            None => { max = Some((ch, count)); }
+            Some(p) if p.1 < count => { max = Some((ch, count)); }
+            _ => (),
+        }
+    }
+    [min, max]
+}
+
 fn naive_solve(input: &Input, steps: usize) -> usize {
     let mut s = input.template.clone();
     for _ in 0..steps {
         s = insert(&s, &input.rules);
     }
     let char_count = count_chars(&s);
-    let mut min = None;
-    let mut max = None;
-    for pair in char_count.iter() {
-        match min {
-            None => { min = Some(pair); }
-            Some(p) if p.1 > pair.1 => { min = Some(pair); }
-            _ => (),
-        }
-        match max {
-            None => { max = Some(pair); }
-            Some(p) if p.1 < pair.1 => { max = Some(pair); }
-            _ => (),
-        }
-    }
+    let [min, max] = find_min_max(&char_count);
     max.unwrap().1 - min.unwrap().1
 }
 
-fn solve_pt1(input: &Input) -> usize {
+fn better_solve(input: &Input, steps: usize) -> usize {
+
+    fn insert_pair(hash_map: &mut HashMap::<[char;2], usize>, pair: &[char;2], count: usize) {
+        let count = hash_map.get(pair).unwrap_or(&0) + count;
+        hash_map.insert(*pair, count);
+    }
+
+    let mut rules = HashMap::new();
+
+    for (&from, &to_insert) in input.rules.iter() {
+        let to0 = [from[0], to_insert];
+        let to1 = [to_insert, from[1]];
+        rules.insert(from, [to0, to1]);
+    }
+    
+    let mut pairs = HashMap::new();
+    let mut iter = input.template.chars();
+    let mut prev_char = iter.next().unwrap();
+    for cur_char in iter {
+        insert_pair(&mut pairs, &[prev_char, cur_char], 1);
+        prev_char = cur_char;
+    }
+    insert_pair(&mut pairs, &[prev_char, '!'], 1);
+    
+    for _ in 0..steps {
+        let mut new_pairs = HashMap::new();
+        for (&pair, &count) in pairs.iter() {
+            if let Some([p0, p1]) = rules.get(&pair) {
+                insert_pair(&mut new_pairs, p0, count);
+                insert_pair(&mut new_pairs, p1, count);
+            }
+            else {
+                insert_pair(&mut new_pairs, &pair, count);
+            }
+        }
+        pairs = new_pairs;
+    }
+
+    let mut char_count = HashMap::new();
+    for ([ch, _], count) in pairs.iter() {
+        let count = char_count.get(ch).unwrap_or(&0) + count;
+        char_count.insert(*ch, count);
+    }
+
+    let [min, max] = find_min_max(&char_count);
+    max.unwrap().1 - min.unwrap().1
+}
+
+fn naive_solve_pt1(input: &Input) -> usize {
     naive_solve(input, 10)
 }
 
-// fn solve_pt2(input: &Input) -> usize {
-//     solve(input, 40)
-// }
+fn solve_pt1(input: &Input) -> usize {
+    better_solve(input, 10)
+}
+
+fn solve_pt2(input: &Input) -> usize {
+    better_solve(input, 40)
+}
 
 fn test1(input: &Input) {
     let rules = &input.rules;
@@ -83,8 +140,9 @@ fn test1(input: &Input) {
     assert_eq!(char_count.get(&'C'), Some(&298));
     assert_eq!(char_count.get(&'H'), Some(&161));
     assert_eq!(char_count.get(&'N'), Some(&865));
+    assert_eq!(naive_solve_pt1(input), 1588);
     assert_eq!(solve_pt1(input), 1588);
-    //assert_eq!(solve_pt2(input), 2188189693529);
+    assert_eq!(solve_pt2(input), 2188189693529);
 }
 
 pub fn main() {
@@ -94,7 +152,7 @@ pub fn main() {
 
     for (name, input) in read_input("input/day14.txt") {
         println!("{} pt1 {}", name, solve_pt1(&input));
-        //        println!("{} pt2:\n{}", input.name, solve_pt2(&input));
+        println!("{} pt2 {}", name, solve_pt2(&input));
     }
 }
 
