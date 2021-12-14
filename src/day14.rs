@@ -150,10 +150,10 @@ pub fn main() {
 
     test1(input.get("test1").unwrap());
 
-    for (name, input) in read_input("input/day14.txt") {
-        println!("{} pt1 {}", name, solve_pt1(&input));
-        println!("{} pt2 {}", name, solve_pt2(&input));
-    }
+    let day14_input = input.get("day14").unwrap();
+    println!("day14 pt1 {}", solve_pt1(day14_input));
+    println!("day14 pt2 {}", solve_pt2(day14_input));
+    
 }
 
 fn read_input(filename: &str) -> HashMap<String, Input> {
