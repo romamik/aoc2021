@@ -67,7 +67,8 @@ impl fmt::Debug for Map {
         for y in 0..self.size_y as isize{
             for x in 0..self.size_x as isize {
                 let node = self.get_at(&Point {x, y}).unwrap();
-                write!(f, "[{:1} {:3}]", node.cost, node.visit.as_ref().map(|v| v.cost).unwrap_or(0))?;
+                write!(f, "[{:1} {:2}]", node.cost, node.visit.as_ref().map(|v| v.cost).unwrap_or(0))?;
+                //write!(f, "{}", node.cost)?;
             }
             writeln!(f, "");
         }
@@ -80,9 +81,9 @@ impl Map {
         let mut map = Vec::new();
         let size_x = input.size_x;
         let size_y = input.size_y;
-        for y in 0..size_x {
+        for y in 0..size_y {
             let input_line = &input.map[y];
-            for x in 0..size_y {
+            for x in 0..size_x {
                 map.push(MapNode { cost: input_line[x], visit: None });
             }
         }
@@ -147,9 +148,9 @@ fn solve_pt1(input: &Input) -> usize {
 
         i += 1;
         if i > 10000 {
-             break;
+            println!("{:?}", map);
+            break;
         }
-
         let cost = map.get_visit_cost_at(&pt).unwrap();
         if pt == finish {
             break;
@@ -174,14 +175,36 @@ fn solve_pt1(input: &Input) -> usize {
     map.get_visit_cost_at(&finish).unwrap()
 }
 
+fn solve_pt2(input: &Input) -> usize {
+
+    let n = 5;
+    let size_x = input.size_x * n;
+    let size_y = input.size_y * n;
+    let mut map = vec![vec![0; size_x]; size_y];
+    for y in 0..size_y {
+        let line = &mut map[y];
+        let ny = y / input.size_y;
+        let iy = y - ny * input.size_y;
+        for x in 0..size_x {
+            
+            let nx = x / input.size_x;
+            let ix = x - nx * input.size_x;
+            line[x] = ((input.map[iy][ix] + nx + ny) - 1) % 9 + 1;
+        }
+    }
+    solve_pt1(&Input {map, size_x, size_y})
+}
+
 fn test(input: &Input) {
     assert_eq!(solve_pt1(input), 40);
+    assert_eq!(solve_pt2(input), 315);
 }
 
 pub fn main() {
     let input = read_input("input/day15.txt");
     test(input.get("test").unwrap());
-    println!("day15 pt1 {:#?}", solve_pt1(input.get("day15").unwrap()));
+    println!("day15 pt1 {}", solve_pt1(input.get("day15").unwrap()));
+    println!("day15 pt2 {}", solve_pt2(input.get("day15").unwrap()));
 }
 
 fn read_input(filename: &str) -> HashMap<String, Input> {
