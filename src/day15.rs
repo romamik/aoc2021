@@ -147,7 +147,7 @@ fn solve_pt1(input: &Input) -> usize {
     while let Some(pt) = queue.pop() {
 
         i += 1;
-        if i > 10000 {
+        if i > 1000000 {
             println!("{:?}", map);
             break;
         }
@@ -197,6 +197,7 @@ fn solve_pt2(input: &Input) -> usize {
 
 fn test(input: &Input) {
     assert_eq!(solve_pt1(input), 40);
+    
     assert_eq!(solve_pt2(input), 315);
 }
 
