@@ -68,9 +68,8 @@ impl fmt::Debug for Map {
             for x in 0..self.size_x as isize {
                 let node = self.get_at(&Point {x, y}).unwrap();
                 write!(f, "[{:1} {:2}]", node.cost, node.visit.as_ref().map(|v| v.cost).unwrap_or(0))?;
-                //write!(f, "{}", node.cost)?;
             }
-            writeln!(f, "");
+            writeln!(f, "")?;
         }
         write!(f, "")
     }
@@ -197,7 +196,6 @@ fn solve_pt2(input: &Input) -> usize {
 
 fn test(input: &Input) {
     assert_eq!(solve_pt1(input), 40);
-    
     assert_eq!(solve_pt2(input), 315);
 }
 
