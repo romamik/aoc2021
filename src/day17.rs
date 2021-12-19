@@ -106,11 +106,14 @@ fn find_max_height(target: &Rect) -> i32 {
                 SimulateResult::BelowTarget | SimulateResult::Undershoot => {
                     break;
                 }
-                r => {
-                    //println!("stage1 {} {} {:?}", vx, vy, r);
+                _r => {
+                    //println!("stage1 {} {} {:?}", vx, vy, _r);
                 }
             }
             vy -= 1;
+            
+            // just cheat
+            if vy < -10000 { break; }
         }
         vy = 1;
         loop {
@@ -121,11 +124,14 @@ fn find_max_height(target: &Rect) -> i32 {
                 SimulateResult::AboveTarget | SimulateResult::Undershoot=> {
                     break;
                 }
-                r => {
-                    //println!("stage2 {} {} {:?}", vx, vy, r);
+                _r => {
+                    //println!("stage2 {} {} {:?}", vx, vy, _r);
                 }
             }
             vy += 1;
+            
+            // just cheat
+            if vy > 10000 { break; }
         }
     }
     max_height
@@ -134,6 +140,7 @@ fn find_max_height(target: &Rect) -> i32 {
 pub fn main() {
     test_simulate();
     test_find_max_height();
+    println!("day 17 pt1 {}", find_max_height(&Rect::new(56, 76, -162, -134)));
 }
 
 fn test_find_max_height() {
