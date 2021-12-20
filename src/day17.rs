@@ -45,7 +45,6 @@ fn simulate(init_vel: &Point, target: &Rect) -> SimulateResult {
     let mut max_height = pos.y;
     let mut last_y_before_target = pos.y;
     loop {
-
         pos.x += vel.x;
         pos.y += vel.y;
         //println!("{:?}", pos);
@@ -62,10 +61,9 @@ fn simulate(init_vel: &Point, target: &Rect) -> SimulateResult {
                 if vel.x == 0 {
                     return if last_y_before_target < target.min_y {
                         SimulateResult::BelowTarget
-                    }
-                    else {
+                    } else {
                         SimulateResult::MayBeThroughTarget
-                    }
+                    };
                 }
             } else if pos.y <= target.max_y {
                 return SimulateResult::Hit { max_height };
@@ -92,55 +90,53 @@ fn simulate(init_vel: &Point, target: &Rect) -> SimulateResult {
     }
 }
 
-fn find_max_height(target: &Rect) -> i32 {
+#[allow(dead_code)]
+struct Trajectory {
+    init_vel: Point,
+    max_height: i32,
+}
 
-    let mut max_height = 0;
-    for vx in 1..=target.max_x {
+fn find_all_hit_trajectories(target: &Rect) -> Vec<Trajectory> {
+    let min_vx = 1; // we should throw in direction of target
+    let max_vx = target.max_x; // if we throw at greater speed we will be farther than target after first step
 
-        let mut vy = 0;
-        loop {
-            match simulate(&Point::new(vx, vy), &target) {
-                SimulateResult::Hit { max_height: mh } => {
-                    max_height = std::cmp::max(max_height, mh);
-                },
-                SimulateResult::BelowTarget | SimulateResult::Undershoot => {
-                    break;
-                }
-                _r => {
-                    //println!("stage1 {} {} {:?}", vx, vy, _r);
-                }
+    let min_vy = target.min_y; // if throw at lower (greater in absolute value, but in negative direction) speed will be below target after first step
+    let max_vy = -min_vy; // if we throw up probe will go up and than return and at starting position it will have same absolute velocity but in down direction
+
+    let mut trajectories = Vec::new();
+    for vx in min_vx..=max_vx {
+        for vy in min_vy..=max_vy {
+            if let SimulateResult::Hit { max_height } = simulate(&Point::new(vx, vy), &target) {
+                trajectories.push(Trajectory {
+                    init_vel: Point::new(vx, vy),
+                    max_height,
+                });
             }
-            vy -= 1;
-            
-            // just cheat
-            if vy < -10000 { break; }
-        }
-        vy = 1;
-        loop {
-            match simulate(&Point::new(vx, vy), &target) {
-                SimulateResult::Hit { max_height: mh } => {
-                    max_height = std::cmp::max(max_height, mh);
-                },
-                SimulateResult::AboveTarget | SimulateResult::Undershoot=> {
-                    break;
-                }
-                _r => {
-                    //println!("stage2 {} {} {:?}", vx, vy, _r);
-                }
-            }
-            vy += 1;
-            
-            // just cheat
-            if vy > 10000 { break; }
         }
     }
-    max_height
+    trajectories
+}
+
+fn find_max_height(target: &Rect) -> i32 {
+    find_all_hit_trajectories(target).iter().max_by_key(|t| t.max_height).unwrap().max_height
+}
+
+fn count_trajectories(target: &Rect) -> usize {
+    find_all_hit_trajectories(target).iter().count()
 }
 
 pub fn main() {
     test_simulate();
     test_find_max_height();
-    println!("day 17 pt1 {}", find_max_height(&Rect::new(56, 76, -162, -134)));
+    test_count_trajectories();
+    let day17_target = Rect::new(56, 76, -162, -134);
+    println!("day 17 pt1 {}", find_max_height(&day17_target));
+    println!("day 17 pt2 {}", count_trajectories(&day17_target));
+}
+
+fn test_count_trajectories() {
+    let target = Rect::new(20, 30, -10, -5);
+    assert_eq!(count_trajectories(&target), 112);
 }
 
 fn test_find_max_height() {
@@ -167,4 +163,3 @@ fn test_simulate() {
         assert_eq!(result, test.2, "{:?}", test);
     }
 }
-
