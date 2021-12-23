@@ -59,6 +59,13 @@ fn naive_solve(input: &Input, steps: usize) -> usize {
     max.unwrap().1 - min.unwrap().1
 }
 
+/*
+We are actually not interested in final polymer, just count of different elements.
+Idea is that each rule can be treated not as insertion rule, but as pair transform rule: I.e. NN->C is NN -> NC + CN
+So we can form list of starting pairs with their counts, and apply rules.
+After that just count elements.
+We should take only first element in pair into account, because second element is used as first element in another pair.
+*/
 fn better_solve(input: &Input, steps: usize) -> usize {
 
     fn insert_pair(hash_map: &mut HashMap::<[char;2], usize>, pair: &[char;2], count: usize) {
