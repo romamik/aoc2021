@@ -33,10 +33,12 @@ Z
 */
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt,
     ops::{Index, IndexMut},
 };
+
+use Axis::*;
 
 type Input = HashMap<String, Vec<Vector>>;
 
@@ -51,12 +53,18 @@ enum Axis {
 
 impl Axis {
     fn all() -> [Axis; 3] {
-        [Axis::X, Axis::Y, Axis::Z]
+        [X, Y, Z]
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Hash, Eq)]
 struct Vector([i32; 3]);
+
+impl Vector {
+    fn negate(&self) -> Vector {
+        Vector([-self[X], -self[Y], -self[Z]])
+    }
+}
 
 impl fmt::Debug for Vector {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -88,9 +96,9 @@ impl Matrix {
 
     fn rotate90cw(axis: Axis) -> Matrix {
         match axis {
-            Axis::X => Matrix([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0]]),
-            Axis::Y => Matrix([[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]),
-            Axis::Z => Matrix([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0]]),
+            X => Matrix([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0]]),
+            Y => Matrix([[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]),
+            Z => Matrix([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0]]),
         }
     }
 
@@ -103,11 +111,7 @@ impl Matrix {
     }
 
     fn translate(v: &Vector) -> Matrix {
-        Matrix([
-            [1, 0, 0, v[Axis::X]],
-            [0, 1, 0, v[Axis::Y]],
-            [0, 0, 1, v[Axis::Z]],
-        ])
+        Matrix([[1, 0, 0, v[X]], [0, 1, 0, v[Y]], [0, 0, 1, v[Z]]])
     }
 
     fn all_orientations() -> Vec<Matrix> {
@@ -115,13 +119,13 @@ impl Matrix {
 
         for m0 in [
             Matrix::identity(),
-            Matrix::rotate90cw(Axis::X),
-            Matrix::rotate90cw(Axis::Y),
+            Matrix::rotate90cw(X),
+            Matrix::rotate90cw(Y),
         ] {
             for flip_dir in 0..2 {
-                let m1 = m0.mul(&Matrix::rotate_n_90cw(Axis::Y, flip_dir * 2));
+                let m1 = m0.mul(&Matrix::rotate_n_90cw(Y, flip_dir * 2));
                 for rot_z in 0..4 {
-                    result.push(m1.mul(&Matrix::rotate_n_90cw(Axis::Z, rot_z)));
+                    result.push(m1.mul(&Matrix::rotate_n_90cw(Z, rot_z)));
                 }
             }
         }
@@ -168,7 +172,78 @@ impl Matrix {
 }
 
 fn try_align(scanner0: &Vec<Vector>, scanner1: &Vec<Vector>, min_pair: usize) -> Option<Matrix> {
+    // align scanner0 and scanner1 on all positions and try all oriatations in every position
+    for pos0 in scanner0.iter() {
+        for pos1 in scanner1.iter() {
+            let pre_orient = Matrix::translate(&pos1.negate());
+            let post_orient = Matrix::translate(&pos0);
+            for orientation in Matrix::all_orientations() {
+                let transform = post_orient.mul(&orientation).mul(&pre_orient);
+                let mut count = 0;
+                for pos in scanner1.iter() {
+                    let pos = transform.apply(pos);
+                    //println!("{:?} {:?}", pos, pos0);
+                    if scanner0.iter().any(|p| *p == pos) {
+                        count += 1;
+                    }
+                }
+                if count >= min_pair {
+                    return Some(transform);
+                }
+            }
+        }
+    }
     None
+}
+
+fn find_scanner_transforms<'a>(scanners: &'a Vec<&Vec<Vector>>) -> Vec<(&'a Vec<Vector>, Matrix)> {
+    fn find_alignment(
+        scanner: &Vec<Vector>,
+        known_scanners: &Vec<(&Vec<Vector>, Vec<Vector>, Matrix)>,
+    ) -> Option<Matrix> {
+        for known_scanner in known_scanners.iter() {
+            let transformed_known_scanner = &known_scanner.1;
+            if let Some(transform) = try_align(scanner, &transformed_known_scanner, MIN_PAIR) {
+                return Some(transform);
+            }
+        }
+        None
+    }
+
+    let mut known_scanners = vec![(scanners[0], scanners[0].clone(), Matrix::identity())];
+    let mut unknown_scanners = scanners[1..].iter().collect::<Vec<_>>();
+    while unknown_scanners.len() > 0 {
+        if let Some((scanner, Some(transform))) = unknown_scanners
+            .iter()
+            .cloned()
+            .map(|s| (s, find_alignment(s, &known_scanners)))
+            .find(|(_s, t)| t.is_some())
+        {
+            let scanner = unknown_scanners
+                .remove(unknown_scanners.iter().position(|s| *s == scanner).unwrap());
+            let transformed_scanner = scanner.iter().map(|v| transform.apply(v)).collect();
+            known_scanners.push((scanner, transformed_scanner, transform));
+        } else {
+            panic!("aligment not found");
+        }
+    }
+
+    known_scanners.iter().cloned().map(|s| (s.0, s.2)).collect()
+}
+
+fn count_unique_vectors(transformed_scanners: &Vec<Vec<Vector>>) -> usize {
+    let hash: HashSet<_> = transformed_scanners.iter().cloned().flatten().collect();
+    println!("{:#?}", hash);
+    hash.len()
+}
+
+fn solve_pt1(scanners: &Vec<&Vec<Vector>>) -> usize {
+    let p: Vec<_> = find_scanner_transforms(scanners)
+        .iter()
+        .map(|(scanner, transform)| scanner.iter().map(|p| transform.apply(p)).collect())
+        .collect();
+    
+    count_unique_vectors(&p)
 }
 
 pub fn main() {
@@ -197,6 +272,8 @@ fn test1(test1_input: &Input) {
         try_align(scanners[0], &transformed_1, MIN_PAIR),
         Some(Matrix::identity())
     );
+
+    assert_eq!(solve_pt1(&scanners), 79);
 }
 
 fn test0(test0_input: &Input) {
@@ -225,9 +302,9 @@ fn test_matrix_translate() {
     assert_eq!(m, Matrix::identity());
 
     // move x+1, then rotate cw
-    let m1 = Matrix::rotate90cw(Axis::Z).mul(&Matrix::translate(&Vector([1, 0, 0])));
+    let m1 = Matrix::rotate90cw(Z).mul(&Matrix::translate(&Vector([1, 0, 0])));
     // rotate cw, then move y-1
-    let m2 = Matrix::translate(&Vector([0, -1, 0])).mul(&Matrix::rotate90cw(Axis::Z));
+    let m2 = Matrix::translate(&Vector([0, -1, 0])).mul(&Matrix::rotate90cw(Z));
     assert_eq!(m1, m2);
 }
 
@@ -261,9 +338,9 @@ fn test_all_orientations() {
 fn test_matrices() {
     let vec = Vector([1, 2, 3]);
     assert_eq!(Matrix::identity().apply(&vec), vec);
-    assert_eq!(Matrix::rotate90cw(Axis::X).apply(&vec), Vector([1, 3, -2]));
-    assert_eq!(Matrix::rotate90cw(Axis::Y).apply(&vec), Vector([-3, 2, 1]));
-    assert_eq!(Matrix::rotate90cw(Axis::Z).apply(&vec), Vector([2, -1, 3]));
+    assert_eq!(Matrix::rotate90cw(X).apply(&vec), Vector([1, 3, -2]));
+    assert_eq!(Matrix::rotate90cw(Y).apply(&vec), Vector([-3, 2, 1]));
+    assert_eq!(Matrix::rotate90cw(Z).apply(&vec), Vector([2, -1, 3]));
 
     for axis in Axis::all() {
         let mut v = vec.clone();
