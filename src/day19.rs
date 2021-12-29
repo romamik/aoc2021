@@ -169,6 +169,10 @@ impl Matrix {
             v3,
         ]
     }
+
+    fn extract_translate(&self) -> Vector {
+        Vector([self.0[0][3], self.0[1][3], self.0[2][3]])
+    }
 }
 
 #[derive(Clone)]
@@ -211,8 +215,9 @@ fn try_align(scanner0: &Scanner, scanner1: &Scanner) -> Option<Matrix> {
     None
 }
 
-fn solve_pt1(scanners: &[Scanner]) -> usize {
+fn solve_both_parts(scanners: &[Scanner]) -> (usize, usize) {
     let mut knowns = vec![scanners[0].clone()];
+    let mut known_positions = vec![Vector([0, 0, 0])];
     let mut known_queue = vec![knowns[0].clone()];
     let mut unknowns = scanners[1..].iter().collect::<Vec<_>>();
 
@@ -223,15 +228,30 @@ fn solve_pt1(scanners: &[Scanner]) -> usize {
                 let transformed_unknown = unknown.apply_transform(&transform);
                 knowns.push(transformed_unknown.clone());
                 known_queue.push(transformed_unknown);
+                known_positions.push(transform.extract_translate());
                 false
             } else {
                 true
             }
         })
     }
-    Scanner(knowns.iter().map(|s| s.0.clone()).flatten().collect())
+    let count = Scanner(knowns.iter().map(|s| s.0.clone()).flatten().collect())
         .0
-        .len()
+        .len();
+
+    let mut max_dist = 0;
+    for i in 0..known_positions.len() {
+        for j in i + 1..known_positions.len() {
+            let a = &known_positions[i];
+            let b = &known_positions[j];
+            let dist = ((a[X] - b[X]).abs() + (a[Y] - b[Y]).abs() + (a[Z] - b[Z]).abs()) as usize;
+            if dist > max_dist {
+                max_dist = dist;
+            }
+        }
+    }
+
+    (count, max_dist)
 }
 
 pub fn main() {
@@ -250,7 +270,7 @@ pub fn main() {
         day19_scanners.push(Scanner::from_vec(vec));
         i += 1;
     }
-    println!("day19 pt1 {}", solve_pt1(&day19_scanners));
+    println!("day19 pt1, pt2: {:?}", solve_both_parts(&day19_scanners));
 }
 
 fn test1(test1_input: &Input) {
@@ -266,26 +286,12 @@ fn test1(test1_input: &Input) {
         try_align(&scanners[0], &transformed_1),
         Some(Matrix::identity())
     );
-    assert_eq!(
-        (
-            align_result.0[0][3],
-            align_result.0[1][3],
-            align_result.0[2][3]
-        ),
-        (68, -1246, -43)
-    );
+    assert_eq!(align_result.extract_translate().0, [68, -1246, -43]);
 
     let align_result = try_align(&transformed_1, &scanners[4]).unwrap();
-    assert_eq!(
-        (
-            align_result.0[0][3],
-            align_result.0[1][3],
-            align_result.0[2][3]
-        ),
-        (-20, -1133, 1061)
-    );
+    assert_eq!(align_result.extract_translate().0, [-20, -1133, 1061]);
 
-    assert_eq!(solve_pt1(&scanners), 79);
+    assert_eq!(solve_both_parts(&scanners), (79, 3621));
 }
 
 fn test0(test0_input: &Input) {
