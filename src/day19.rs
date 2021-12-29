@@ -171,23 +171,38 @@ impl Matrix {
     }
 }
 
-fn try_align(scanner0: &Vec<Vector>, scanner1: &Vec<Vector>, min_pair: usize) -> Option<Matrix> {
+#[derive(Clone)]
+struct Scanner(HashSet<Vector>);
+
+impl Scanner {
+    fn from_vec(v: &[Vector]) -> Scanner {
+        Scanner(v.iter().cloned().collect())
+    }
+
+    fn apply_transform(&self, transform: &Matrix) -> Scanner {
+        Scanner(self.0.iter().map(|v| transform.apply(v)).collect())
+    }
+
+    fn count_common(&self, other: &Scanner, other_transform: &Matrix) -> usize {
+        other
+            .0
+            .iter()
+            .cloned()
+            .filter(|v| self.0.contains(&other_transform.apply(v)))
+            .count()
+    }
+}
+
+fn try_align(scanner0: &Scanner, scanner1: &Scanner) -> Option<Matrix> {
     // align scanner0 and scanner1 on all positions and try all oriatations in every position
-    for pos0 in scanner0.iter() {
-        for pos1 in scanner1.iter() {
+    for pos0 in scanner0.0.iter() {
+        for pos1 in scanner1.0.iter() {
             let pre_orient = Matrix::translate(&pos1.negate());
             let post_orient = Matrix::translate(&pos0);
             for orientation in Matrix::all_orientations() {
                 let transform = post_orient.mul(&orientation).mul(&pre_orient);
-                let mut count = 0;
-                for pos in scanner1.iter() {
-                    let pos = transform.apply(pos);
-                    //println!("{:?} {:?}", pos, pos0);
-                    if scanner0.iter().any(|p| *p == pos) {
-                        count += 1;
-                    }
-                }
-                if count >= min_pair {
+                let count = scanner0.count_common(scanner1, &transform);
+                if count >= MIN_PAIR {
                     return Some(transform);
                 }
             }
@@ -196,54 +211,27 @@ fn try_align(scanner0: &Vec<Vector>, scanner1: &Vec<Vector>, min_pair: usize) ->
     None
 }
 
-fn find_scanner_transforms<'a>(scanners: &'a Vec<&Vec<Vector>>) -> Vec<(&'a Vec<Vector>, Matrix)> {
-    fn find_alignment(
-        scanner: &Vec<Vector>,
-        known_scanners: &Vec<(&Vec<Vector>, Vec<Vector>, Matrix)>,
-    ) -> Option<Matrix> {
-        for known_scanner in known_scanners.iter() {
-            let transformed_known_scanner = &known_scanner.1;
-            if let Some(transform) = try_align(scanner, &transformed_known_scanner, MIN_PAIR) {
-                return Some(transform);
+fn solve_pt1(scanners: &[Scanner]) -> usize {
+    let mut knowns = vec![scanners[0].clone()];
+    let mut known_queue = vec![knowns[0].clone()];
+    let mut unknowns = scanners[1..].iter().collect::<Vec<_>>();
+
+    while unknowns.len() > 0 {
+        let known = known_queue.pop().unwrap();
+        unknowns.retain(|&unknown| {
+            if let Some(transform) = try_align(&known, unknown) {
+                let transformed_unknown = unknown.apply_transform(&transform);
+                knowns.push(transformed_unknown.clone());
+                known_queue.push(transformed_unknown);
+                false
+            } else {
+                true
             }
-        }
-        None
+        })
     }
-
-    let mut known_scanners = vec![(scanners[0], scanners[0].clone(), Matrix::identity())];
-    let mut unknown_scanners = scanners[1..].iter().collect::<Vec<_>>();
-    while unknown_scanners.len() > 0 {
-        if let Some((scanner, Some(transform))) = unknown_scanners
-            .iter()
-            .cloned()
-            .map(|s| (s, find_alignment(s, &known_scanners)))
-            .find(|(_s, t)| t.is_some())
-        {
-            let scanner = unknown_scanners
-                .remove(unknown_scanners.iter().position(|s| *s == scanner).unwrap());
-            let transformed_scanner = scanner.iter().map(|v| transform.apply(v)).collect();
-            known_scanners.push((scanner, transformed_scanner, transform));
-        } else {
-            panic!("aligment not found");
-        }
-    }
-
-    known_scanners.iter().cloned().map(|s| (s.0, s.2)).collect()
-}
-
-fn count_unique_vectors(transformed_scanners: &Vec<Vec<Vector>>) -> usize {
-    let hash: HashSet<_> = transformed_scanners.iter().cloned().flatten().collect();
-    println!("{:#?}", hash);
-    hash.len()
-}
-
-fn solve_pt1(scanners: &Vec<&Vec<Vector>>) -> usize {
-    let p: Vec<_> = find_scanner_transforms(scanners)
-        .iter()
-        .map(|(scanner, transform)| scanner.iter().map(|p| transform.apply(p)).collect())
-        .collect();
-    
-    count_unique_vectors(&p)
+    Scanner(knowns.iter().map(|s| s.0.clone()).flatten().collect())
+        .0
+        .len()
 }
 
 pub fn main() {
@@ -253,24 +241,48 @@ pub fn main() {
     test_matrix_translate();
     test0(input.get("test0").unwrap());
     test1(input.get("test1").unwrap());
-
     println!("tests ok");
+
+    let mut day19_scanners = vec![];
+    let mut i = 0;
+    let day19_input = input.get("day19").unwrap();
+    while let Some(vec) = day19_input.get(&format!("scanner {}", i)) {
+        day19_scanners.push(Scanner::from_vec(vec));
+        i += 1;
+    }
+    println!("day19 pt1 {}", solve_pt1(&day19_scanners));
 }
 
 fn test1(test1_input: &Input) {
     let scanners = (0..=4)
         .map(|n| test1_input.get(&format!("scanner {}", n)).unwrap())
+        .map(|v| Scanner::from_vec(v))
         .collect::<Vec<_>>();
 
     // try align scanners 0 and 1
-    let align_result = try_align(scanners[0], scanners[1], MIN_PAIR).unwrap();
-    let transformed_1 = scanners[1]
-        .iter()
-        .map(|v| align_result.apply(v))
-        .collect::<Vec<_>>();
+    let align_result = try_align(&scanners[0], &scanners[1]).unwrap();
+    let transformed_1 = scanners[1].apply_transform(&align_result);
     assert_eq!(
-        try_align(scanners[0], &transformed_1, MIN_PAIR),
+        try_align(&scanners[0], &transformed_1),
         Some(Matrix::identity())
+    );
+    assert_eq!(
+        (
+            align_result.0[0][3],
+            align_result.0[1][3],
+            align_result.0[2][3]
+        ),
+        (68, -1246, -43)
+    );
+
+    let align_result = try_align(&transformed_1, &scanners[4]).unwrap();
+    assert_eq!(
+        (
+            align_result.0[0][3],
+            align_result.0[1][3],
+            align_result.0[2][3]
+        ),
+        (-20, -1133, 1061)
     );
 
     assert_eq!(solve_pt1(&scanners), 79);
