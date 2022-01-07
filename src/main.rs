@@ -21,6 +21,7 @@ mod day20;
 mod day21pt1;
 mod day21;
 mod day22;
+mod day23;
 
 fn main() {
     let run_all = false;
@@ -47,6 +48,7 @@ fn main() {
         day20::main();
         day21pt1::main();
         day21::main();
+        day22::main();
     }
-    day22::main();
+    day23::main();
 }
