@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, rc::Rc};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct State {
@@ -51,7 +51,11 @@ fn find_possible_positions_in_hall(room_n: usize, state: &State) -> Vec<usize> {
 }
 
 fn can_move_in_hall(state: &State, from: usize, to: usize) -> bool {
-    let (from, to) = if to > from { (from + 1, to) } else { (to, from - 1) };
+    let (from, to) = if to > from {
+        (from + 1, to)
+    } else {
+        (to, from - 1)
+    };
     state.hall[from..=to].iter().all(|&c| c == '.')
 }
 
@@ -140,9 +144,11 @@ fn find_arrange_cost(
 ) -> usize {
     let mut queue = Vec::new();
     let mut visited = HashMap::new();
-    visited.insert((*state).clone(), (0_usize, None));
-    queue.push(((*state).clone(), 0_usize));
+    let init_state = Rc::new(state.clone());
+    visited.insert(init_state.clone(), (0_usize, None));
+    queue.push((init_state, 0_usize));
     loop {
+        queue.sort_by_key(|(_, cost)| std::cmp::Reverse(*cost));
         let (state, cost) = queue.pop().unwrap();
         if is_state_final(&state, home_room) {
             // let mut s = Some(state.clone());
@@ -157,6 +163,7 @@ fn find_arrange_cost(
             return cost;
         }
         for (next_state, cost_to_next_state) in make_next_states(&state, move_cost, home_room) {
+            let next_state = Rc::new(next_state);
             let next_cost = cost + cost_to_next_state;
             let existing_cost = visited.get(&next_state).map(|(cost, _)| *cost);
             if existing_cost
@@ -165,10 +172,17 @@ fn find_arrange_cost(
             {
                 visited.insert(next_state.clone(), (next_cost, Some(state.clone())));
                 queue.push((next_state, next_cost));
-                queue.sort_by_key(|(_, cost)| std::cmp::Reverse(*cost));
             }
         }
     }
+}
+
+fn make_pt2_input(input: &State) -> State {
+    let s = format!("{:?}", input);
+    let mut lines: Vec<_> = s.lines().collect();
+    lines.insert(3, "  #D#C#B#A#");
+    lines.insert(4, "  #D#B#A#C#");
+    parse_state(&lines)
 }
 
 pub fn main() {
@@ -181,10 +195,64 @@ pub fn main() {
 
     let input = parse_input(&std::fs::read_to_string("input/day23.txt").unwrap());
     let test_input = input.get("test").unwrap();
+    let test_input_pt2 = make_pt2_input(&test_input);
     let day23_input = input.get("day23").unwrap();
+    let day23_input_pt2 = make_pt2_input(&day23_input);
     assert_eq!(12521, find_arrange_cost(test_input, &move_cost, &home_room));
+    assert_eq!(44169, find_arrange_cost(&test_input_pt2, &move_cost, &home_room));
     println!("tests ok");
-    println!("day23 pt1 {}", find_arrange_cost(day23_input, &move_cost, &home_room));
+    println!(
+        "day23 pt1 {}",
+        find_arrange_cost(day23_input, &move_cost, &home_room)
+    );
+    println!(
+        "day23 pt2 {}",
+        find_arrange_cost(&day23_input_pt2, &move_cost, &home_room)
+    );
+}
+
+fn parse_state(lines: &[&str]) -> State {
+    let line0 = lines[0];
+    let hall_size = line0.len() - 2;
+    assert_eq!(
+        line0,
+        std::iter::repeat('#')
+            .take(hall_size + 2)
+            .collect::<String>()
+    );
+    let line1 = lines[1];
+    assert_eq!(
+        line1,
+        format!(
+            "#{}#",
+            std::iter::repeat('.').take(hall_size).collect::<String>()
+        )
+    );
+    let line2 = lines[2];
+    let mut room_coords = Vec::new();
+    line2.chars().enumerate().for_each(|(i, c)| match c {
+        ' ' | '#' => {}
+        c if is_apod_char(c) => room_coords.push(i - 1),
+        _ => panic!("unexpected char {} in line {}", c, line2),
+    });
+    let mut rooms = vec![Vec::new(); room_coords.len()];
+    lines[2..].iter().enumerate().for_each(|(line_n, line)| {
+        line.chars().enumerate().for_each(|(i, c)| match c {
+            ' ' | '#' => {}
+            c if is_apod_char(c) => {
+                let room_n = room_coords.iter().position(|&pos| pos + 1 == i).unwrap();
+                assert_eq!(rooms[room_n].len(), line_n);
+                rooms[room_n].push(c);
+            }
+            _ => panic!("unexpected char {} in line {}", c, line2),
+        });
+    });
+    assert!(!rooms.iter().any(|room| room.len() != rooms[0].len()));
+    State {
+        hall: std::iter::repeat('.').take(hall_size).collect(),
+        rooms,
+        room_coords,
+    }
 }
 
 fn parse_input(s: &str) -> HashMap<String, State> {
@@ -192,50 +260,7 @@ fn parse_input(s: &str) -> HashMap<String, State> {
         .map(|s| {
             let lines: Vec<_> = s.split("\n").collect();
             let name = lines[0].to_string();
-            let line0 = lines[1];
-            let hall_size = line0.len() - 2;
-            assert_eq!(
-                line0,
-                std::iter::repeat('#')
-                    .take(hall_size + 2)
-                    .collect::<String>()
-            );
-            let line1 = lines[2];
-            assert_eq!(
-                line1,
-                format!(
-                    "#{}#",
-                    std::iter::repeat('.').take(hall_size).collect::<String>()
-                )
-            );
-            let line2 = lines[3];
-            let mut room_coords = Vec::new();
-            line2.chars().enumerate().for_each(|(i, c)| match c {
-                ' ' | '#' => {}
-                c if is_apod_char(c) => room_coords.push(i - 1),
-                _ => panic!("unexpected char {} in line {}", c, line2),
-            });
-            let mut rooms = vec![Vec::new(); room_coords.len()];
-            lines[3..].iter().enumerate().for_each(|(line_n, line)| {
-                line.chars().enumerate().for_each(|(i, c)| match c {
-                    ' ' | '#' => {}
-                    c if is_apod_char(c) => {
-                        let room_n = room_coords.iter().position(|&pos| pos + 1 == i).unwrap();
-                        assert_eq!(rooms[room_n].len(), line_n);
-                        rooms[room_n].push(c);
-                    }
-                    _ => panic!("unexpected char {} in line {}", c, line2),
-                });
-            });
-            assert!(!rooms.iter().any(|room| room.len() != rooms[0].len()));
-            (
-                name,
-                State {
-                    hall: std::iter::repeat('.').take(hall_size).collect(),
-                    rooms,
-                    room_coords,
-                },
-            )
+            (name, parse_state(&lines[1..]))
         })
         .collect()
 }
